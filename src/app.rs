@@ -1,23 +1,21 @@
+use crate::egui_priv::*;
+use std::collections::HashMap;
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize, serde::Serialize, Default)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
-    // Example stuff:
-    label: String,
-
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    value: f32,
+    palette: HashMap<String, egui::Color32>,
+    faces: HashMap<String, String>, // face name: palette color
 }
 
-impl Default for TemplateApp {
+/*impl Default for TemplateApp {
     fn default() -> Self {
         Self {
-            // Example stuff:
-            label: "Hello World!".to_owned(),
-            value: 2.7,
+            palette: HashMap::new()
         }
     }
-}
+}*/
 
 impl TemplateApp {
     /// Called once before the first frame.
@@ -27,11 +25,21 @@ impl TemplateApp {
 
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
-        if let Some(storage) = cc.storage {
+        /*if let Some(storage) = cc.storage {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
-        }
+        }*/
 
-        Default::default()
+        let mut new: Self = Default::default();
+        new.palette.insert("Red".to_string(), egui::Color32::RED);
+        new.palette
+            .insert("Green".to_string(), egui::Color32::GREEN);
+        new.palette
+            .insert("White".to_string(), egui::Color32::WHITE);
+        new.palette.insert("Blue".to_string(), egui::Color32::BLUE);
+        new.faces.insert("R".to_string(), "Red".to_string());
+        new.faces.insert("U".to_string(), "White".to_string());
+        new.faces.insert("F".to_string(), "Green".to_string());
+        new
     }
 }
 
@@ -66,30 +74,16 @@ impl eframe::App for TemplateApp {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("eframe template");
-
-            ui.horizontal(|ui| {
-                ui.label("Write something: ");
-                ui.text_edit_singleline(&mut self.label);
-            });
-
-            ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-            if ui.button("Increment").clicked() {
-                self.value += 1.0;
+            //egui::Grid::new("colors").min_col_width(0.0).show(ui, |ui| {
+            for face in ["R", "U", "F"] {
+                // i can't make a mutable view &mut [u8; 3] of a Color so i have to do this
+                let color = self.palette[&self.faces[face]];
+                if color_button(ui, color, false).clicked() {}
+                //Ray::ray_to_color_mut(prefs)[ray] = color.into();
+                ui.label(face);
+                ui.end_row();
             }
-
-            ui.separator();
-
-            ui.add(egui::github_link_file!(
-                "https://github.com/emilk/eframe_template/blob/master/",
-                "Source code."
-            ));
-
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                powered_by_egui_and_eframe(ui);
-                egui::warn_if_debug_build(ui);
-            });
+            //});
         });
     }
 }
